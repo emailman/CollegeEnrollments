@@ -46,6 +46,27 @@ composeApp/src/
 - FAB onClick must set `showBottomSheet = true` to open forms
 - `onDismissRequest` and `onCancel` must reset sheet state to `false` for FAB to work repeatedly
 - Web targets (js, wasmJs) removed due to SQLDelight incompatibility
+- **JVM SLF4J warning**: Added `slf4j-simple` dependency to `jvmMain`
+- **JVM kotlinx-datetime ClassNotFoundException**: Use `java.time.LocalDate` instead (available on both JVM and Android)
+- **JVM SQLDelight Flow doesn't auto-notify**: EnrollmentViewModel uses MutableStateFlow with manual `loadEnrollments()` calls after database mutations instead of relying on SQLDelight's Flow
+
+### JVM/Desktop Architecture Note
+SQLDelight's JDBC driver on JVM does NOT automatically notify Flow subscribers when data changes (unlike Android driver). The workaround is:
+1. Repositories have both `getAllXxx(): Flow` and `suspend getAllXxxList(): List` methods
+2. ViewModels use MutableStateFlow and manually reload data after insert/update/delete operations
+3. This pattern is used in `EnrollmentViewModel`; `StudentViewModel` and `CourseViewModel` may need similar updates if their lists don't refresh
+
+## Current Status
+- **All core features complete**: Students, Courses, Enrollments CRUD working
+- **Desktop (JVM)**: Fully functional
+- **Android**: Should work but needs testing after recent JVM fixes
+
+## Potential Enhancements
+- Search/filter on student/course lists
+- Dashboard with statistics
+- Grade picker dropdown (A, B+, B, etc.) instead of free text
+- Student detail view showing all enrollments
+- Apply MutableStateFlow pattern to StudentViewModel/CourseViewModel if needed
 
 ## Build Commands
 ```shell
