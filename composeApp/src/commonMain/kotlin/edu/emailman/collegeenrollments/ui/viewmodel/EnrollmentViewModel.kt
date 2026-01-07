@@ -8,15 +8,9 @@ import edu.emailman.collegeenrollments.db.repository.CourseRepository
 import edu.emailman.collegeenrollments.db.repository.EnrollmentRepository
 import edu.emailman.collegeenrollments.db.repository.StudentRepository
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.todayIn
 
 data class EnrollmentDisplay(
     val id: Long,
@@ -48,34 +42,47 @@ sealed class EnrollmentUiEvent {
 
 class EnrollmentViewModel(
     private val enrollmentRepository: EnrollmentRepository,
-    studentRepository: StudentRepository,
-    courseRepository: CourseRepository
+    private val studentRepository: StudentRepository,
+    private val courseRepository: CourseRepository
 ) : ViewModel() {
 
-    val students: StateFlow<List<Student>> = studentRepository.getAllStudents()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    // Use MutableStateFlow for manual data management (JVM SQLDelight doesn't auto-notify)
+    private val _students = MutableStateFlow<List<Student>>(emptyList())
+    val students: StateFlow<List<Student>> = _students.asStateFlow()
 
-    val courses: StateFlow<List<Course>> = courseRepository.getAllCourses()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    private val _courses = MutableStateFlow<List<Course>>(emptyList())
+    val courses: StateFlow<List<Course>> = _courses.asStateFlow()
 
-    // Combine all enrollments with student and course data
-    val enrollments: StateFlow<List<EnrollmentDisplay>> = combine(
-        enrollmentRepository.getAllEnrollments(),
-        students,
-        courses
-    ) { enrollments, studentList, courseList ->
-        val studentMap = studentList.associateBy { it.id }
-        val courseMap = courseList.associateBy { it.id }
+    private val _enrollments = MutableStateFlow<List<EnrollmentDisplay>>(emptyList())
+    val enrollments: StateFlow<List<EnrollmentDisplay>> = _enrollments.asStateFlow()
 
-        enrollments.mapNotNull { enrollment ->
+    init {
+        // Load initial data
+        loadAllData()
+    }
+
+    private fun loadAllData() {
+        viewModelScope.launch {
+            loadStudents()
+            loadCourses()
+            loadEnrollments()
+        }
+    }
+
+    private suspend fun loadStudents() {
+        _students.value = studentRepository.getAllStudentsList()
+    }
+
+    private suspend fun loadCourses() {
+        _courses.value = courseRepository.getAllCoursesList()
+    }
+
+    private suspend fun loadEnrollments() {
+        val enrollmentList = enrollmentRepository.getAllEnrollmentsList()
+        val studentMap = _students.value.associateBy { it.id }
+        val courseMap = _courses.value.associateBy { it.id }
+
+        _enrollments.value = enrollmentList.mapNotNull { enrollment ->
             val student = studentMap[enrollment.studentId]
             val course = courseMap[enrollment.courseId]
 
@@ -94,11 +101,15 @@ class EnrollmentViewModel(
                 )
             } else null
         }.sortedWith(compareBy({ it.studentName }, { it.courseCode }))
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    }
+
+    private fun refreshEnrollments() {
+        viewModelScope.launch {
+            loadStudents()
+            loadCourses()
+            loadEnrollments()
+        }
+    }
 
     private val _formState = MutableStateFlow(EnrollmentFormState())
     val formState: StateFlow<EnrollmentFormState> = _formState.asStateFlow()
@@ -161,6 +172,7 @@ class EnrollmentViewModel(
                 try {
                     val grade = state.grade.trim().ifEmpty { null }
                     enrollmentRepository.updateEnrollmentGrade(state.editingEnrollmentId, grade)
+                    refreshEnrollments()
                     _uiEvent.value = EnrollmentUiEvent.ShowSuccess("Grade updated successfully")
                     _formState.value = EnrollmentFormState()
                 } catch (e: Exception) {
@@ -194,6 +206,7 @@ class EnrollmentViewModel(
                         enrollmentDate = today,
                         grade = null
                     )
+                    refreshEnrollments()
                     _uiEvent.value = EnrollmentUiEvent.ShowSuccess(
                         "${student.name} enrolled in ${course.code}"
                     )
@@ -217,6 +230,7 @@ class EnrollmentViewModel(
             _isLoading.value = true
             try {
                 enrollmentRepository.deleteEnrollment(enrollment.id)
+                refreshEnrollments()
                 _uiEvent.value = EnrollmentUiEvent.ShowSuccess(
                     "${enrollment.studentName} removed from ${enrollment.courseCode}"
                 )
@@ -229,7 +243,8 @@ class EnrollmentViewModel(
     }
 
     private fun getCurrentDate(): String {
-        // Simple date format: YYYY-MM-DD
-        return Clock.System.todayIn(TimeZone.currentSystemDefault()).toString()
+        // Simple date format: YYYY-MM-DD using Java time
+        val now = java.time.LocalDate.now()
+        return now.toString()
     }
 }

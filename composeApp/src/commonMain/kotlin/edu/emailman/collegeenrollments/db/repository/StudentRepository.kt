@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 
 interface StudentRepository {
     fun getAllStudents(): Flow<List<Student>>
+    suspend fun getAllStudentsList(): List<Student>
     fun getStudentById(id: Long): Flow<Student?>
     suspend fun getStudentByEmail(email: String): Student?
     suspend fun insertStudent(name: String, email: String)
@@ -27,6 +28,12 @@ class StudentRepositoryImpl(
 
     override fun getAllStudents(): Flow<List<Student>> {
         return queries.selectAllStudents().asFlow().mapToList(Dispatchers.IO)
+    }
+
+    override suspend fun getAllStudentsList(): List<Student> {
+        return withContext(Dispatchers.IO) {
+            queries.selectAllStudents().executeAsList()
+        }
     }
 
     override fun getStudentById(id: Long): Flow<Student?> {

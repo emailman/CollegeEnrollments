@@ -46,6 +46,8 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.sqldelight.sqlite.driver)
+            implementation(libs.slf4j.simple)
+            implementation(libs.kotlinx.datetime)
         }
     }
 }

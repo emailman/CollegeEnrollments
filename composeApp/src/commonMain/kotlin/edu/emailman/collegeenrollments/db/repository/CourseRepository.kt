@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 
 interface CourseRepository {
     fun getAllCourses(): Flow<List<Course>>
+    suspend fun getAllCoursesList(): List<Course>
     fun getCourseById(id: Long): Flow<Course?>
     suspend fun getCourseByCode(code: String): Course?
     suspend fun insertCourse(name: String, code: String, credits: Long)
@@ -27,6 +28,12 @@ class CourseRepositoryImpl(
 
     override fun getAllCourses(): Flow<List<Course>> {
         return queries.selectAllCourses().asFlow().mapToList(Dispatchers.IO)
+    }
+
+    override suspend fun getAllCoursesList(): List<Course> {
+        return withContext(Dispatchers.IO) {
+            queries.selectAllCourses().executeAsList()
+        }
     }
 
     override fun getCourseById(id: Long): Flow<Course?> {

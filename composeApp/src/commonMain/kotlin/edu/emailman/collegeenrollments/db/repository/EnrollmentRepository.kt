@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 
 interface EnrollmentRepository {
     fun getAllEnrollments(): Flow<List<Enrollment>>
+    suspend fun getAllEnrollmentsList(): List<Enrollment>
     fun getEnrollmentById(id: Long): Flow<Enrollment?>
     fun getEnrollmentsByStudent(studentId: Long): Flow<List<SelectEnrollmentsByStudent>>
     fun getEnrollmentsByCourse(courseId: Long): Flow<List<SelectEnrollmentsByCourse>>
@@ -33,6 +34,12 @@ class EnrollmentRepositoryImpl(
 
     override fun getAllEnrollments(): Flow<List<Enrollment>> {
         return queries.selectAllEnrollments().asFlow().mapToList(Dispatchers.IO)
+    }
+
+    override suspend fun getAllEnrollmentsList(): List<Enrollment> {
+        return withContext(Dispatchers.IO) {
+            queries.selectAllEnrollments().executeAsList()
+        }
     }
 
     override fun getEnrollmentById(id: Long): Flow<Enrollment?> {
