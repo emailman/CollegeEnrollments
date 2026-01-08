@@ -65,6 +65,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EnrollmentScreen(viewModel: EnrollmentViewModel) {
+    // Refresh data when screen enters composition to pick up changes from other screens
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
+
     val enrollments by viewModel.enrollments.collectAsState()
     val students by viewModel.students.collectAsState()
     val courses by viewModel.courses.collectAsState()

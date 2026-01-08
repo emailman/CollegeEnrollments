@@ -49,6 +49,7 @@ composeApp/src/
 - **JVM SLF4J warning**: Added `slf4j-simple` dependency to `jvmMain`
 - **JVM kotlinx-datetime ClassNotFoundException**: Use `java.time.LocalDate` instead (available on both JVM and Android)
 - **JVM SQLDelight Flow doesn't auto-notify**: EnrollmentViewModel uses MutableStateFlow with manual `loadEnrollments()` calls after database mutations instead of relying on SQLDelight's Flow
+- **Enrollment screen not showing new courses/students**: Added `refresh()` method to EnrollmentViewModel and `LaunchedEffect(Unit)` in EnrollmentScreen to reload data when navigating to the tab (picks up changes made on other screens)
 
 ### JVM/Desktop Architecture Note
 SQLDelight's JDBC driver on JVM does NOT automatically notify Flow subscribers when data changes (unlike Android driver). The workaround is:
@@ -58,15 +59,16 @@ SQLDelight's JDBC driver on JVM does NOT automatically notify Flow subscribers w
 
 ## Current Status
 - **All core features complete**: Students, Courses, Enrollments CRUD working
-- **Desktop (JVM)**: Fully functional
-- **Android**: Should work but needs testing after recent JVM fixes
+- **Desktop (JVM)**: Fully functional, tested
+- **Android**: Fully functional, tested on Pixel 8a (Android 16)
+- **Cross-screen data sync**: EnrollmentScreen refreshes on tab entry to pick up changes from other screens
 
 ## Potential Enhancements
 - Search/filter on student/course lists
 - Dashboard with statistics
 - Grade picker dropdown (A, B+, B, etc.) instead of free text
 - Student detail view showing all enrollments
-- Apply MutableStateFlow pattern to StudentViewModel/CourseViewModel if needed
+- Course detail view showing all enrolled students
 
 ## Build Commands
 ```shell

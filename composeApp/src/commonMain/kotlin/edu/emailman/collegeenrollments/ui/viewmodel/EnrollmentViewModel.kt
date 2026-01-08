@@ -61,6 +61,15 @@ class EnrollmentViewModel(
         loadAllData()
     }
 
+    /**
+     * Public method to refresh all data.
+     * Call this when navigating to the enrollment screen to pick up
+     * any changes made to students/courses on other screens.
+     */
+    fun refresh() {
+        loadAllData()
+    }
+
     private fun loadAllData() {
         viewModelScope.launch {
             loadStudents()
