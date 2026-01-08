@@ -20,14 +20,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import edu.emailman.collegeenrollments.db.CollegeDatabase
-import edu.emailman.collegeenrollments.db.repository.RepositoryProvider
-import edu.emailman.collegeenrollments.ui.screen.CourseScreen
-import edu.emailman.collegeenrollments.ui.screen.EnrollmentScreen
-import edu.emailman.collegeenrollments.ui.screen.StudentScreen
-import edu.emailman.collegeenrollments.ui.viewmodel.CourseViewModel
-import edu.emailman.collegeenrollments.ui.viewmodel.EnrollmentViewModel
-import edu.emailman.collegeenrollments.ui.viewmodel.StudentViewModel
+import edu.emailman.collegeenrollments.api.*
+import edu.emailman.collegeenrollments.api.viewmodel.*
+import edu.emailman.collegeenrollments.ui.screen.web.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 enum class Screen(val title: String, val icon: ImageVector) {
@@ -38,16 +33,18 @@ enum class Screen(val title: String, val icon: ImageVector) {
 
 @Composable
 @Preview
-fun App(database: CollegeDatabase) {
-    val repositoryProvider = remember { RepositoryProvider(database) }
-    val studentViewModel = remember { StudentViewModel(repositoryProvider.studentRepository) }
-    val courseViewModel = remember { CourseViewModel(repositoryProvider.courseRepository) }
+fun App(baseUrl: String = "http://localhost:8081") {
+    // Create API client and repositories
+    val apiClient = remember { ApiClient(baseUrl) }
+    val studentRepository = remember { StudentApiRepository(apiClient) }
+    val courseRepository = remember { CourseApiRepository(apiClient) }
+    val enrollmentRepository = remember { EnrollmentApiRepository(apiClient) }
+
+    // Create ViewModels
+    val studentViewModel = remember { StudentApiViewModel(studentRepository) }
+    val courseViewModel = remember { CourseApiViewModel(courseRepository) }
     val enrollmentViewModel = remember {
-        EnrollmentViewModel(
-            enrollmentRepository = repositoryProvider.enrollmentRepository,
-            studentRepository = repositoryProvider.studentRepository,
-            courseRepository = repositoryProvider.courseRepository
-        )
+        EnrollmentApiViewModel(enrollmentRepository, studentRepository, courseRepository)
     }
 
     MaterialTheme {
@@ -62,7 +59,15 @@ fun App(database: CollegeDatabase) {
                             icon = { Icon(screen.icon, contentDescription = screen.title) },
                             label = { Text(screen.title) },
                             selected = currentScreen == screen,
-                            onClick = { currentScreen = screen }
+                            onClick = {
+                                currentScreen = screen
+                                // Refresh data when switching tabs
+                                when (screen) {
+                                    Screen.Students -> studentViewModel.refresh()
+                                    Screen.Courses -> courseViewModel.refresh()
+                                    Screen.Enrollments -> enrollmentViewModel.refresh()
+                                }
+                            }
                         )
                     }
                 }
@@ -70,9 +75,9 @@ fun App(database: CollegeDatabase) {
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
                 when (currentScreen) {
-                    Screen.Students -> StudentScreen(studentViewModel)
-                    Screen.Courses -> CourseScreen(courseViewModel)
-                    Screen.Enrollments -> EnrollmentScreen(enrollmentViewModel)
+                    Screen.Students -> WebStudentScreen(studentViewModel)
+                    Screen.Courses -> WebCourseScreen(courseViewModel)
+                    Screen.Enrollments -> WebEnrollmentScreen(enrollmentViewModel)
                 }
             }
         }

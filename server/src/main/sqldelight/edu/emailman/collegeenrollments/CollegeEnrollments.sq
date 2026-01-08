@@ -1,0 +1,102 @@
+-- College Enrollments Database Schema
+
+-- Students table
+CREATE TABLE Student (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE
+);
+
+-- Courses table
+CREATE TABLE Course (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    code TEXT NOT NULL UNIQUE,
+    credits INTEGER NOT NULL DEFAULT 3
+);
+
+-- Enrollments table (many-to-many relationship)
+CREATE TABLE Enrollment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    studentId INTEGER NOT NULL,
+    courseId INTEGER NOT NULL,
+    enrollmentDate TEXT NOT NULL,
+    grade TEXT,
+    FOREIGN KEY (studentId) REFERENCES Student(id) ON DELETE CASCADE,
+    FOREIGN KEY (courseId) REFERENCES Course(id) ON DELETE CASCADE,
+    UNIQUE(studentId, courseId)
+);
+
+-- Student Queries
+selectAllStudents:
+SELECT * FROM Student ORDER BY name;
+
+selectStudentById:
+SELECT * FROM Student WHERE id = ?;
+
+selectStudentByEmail:
+SELECT * FROM Student WHERE email = ?;
+
+insertStudent:
+INSERT INTO Student(name, email) VALUES (?, ?);
+
+updateStudent:
+UPDATE Student SET name = ?, email = ? WHERE id = ?;
+
+deleteStudent:
+DELETE FROM Student WHERE id = ?;
+
+lastInsertId:
+SELECT last_insert_rowid();
+
+-- Course Queries
+selectAllCourses:
+SELECT * FROM Course ORDER BY code;
+
+selectCourseById:
+SELECT * FROM Course WHERE id = ?;
+
+selectCourseByCode:
+SELECT * FROM Course WHERE code = ?;
+
+insertCourse:
+INSERT INTO Course(name, code, credits) VALUES (?, ?, ?);
+
+updateCourse:
+UPDATE Course SET name = ?, code = ?, credits = ? WHERE id = ?;
+
+deleteCourse:
+DELETE FROM Course WHERE id = ?;
+
+-- Enrollment Queries
+selectAllEnrollments:
+SELECT * FROM Enrollment;
+
+selectEnrollmentById:
+SELECT * FROM Enrollment WHERE id = ?;
+
+selectEnrollmentsByStudent:
+SELECT Enrollment.*, Course.name AS courseName, Course.code AS courseCode, Course.credits
+FROM Enrollment
+INNER JOIN Course ON Enrollment.courseId = Course.id
+WHERE Enrollment.studentId = ?
+ORDER BY Course.code;
+
+selectEnrollmentsByCourse:
+SELECT Enrollment.*, Student.name AS studentName, Student.email AS studentEmail
+FROM Enrollment
+INNER JOIN Student ON Enrollment.studentId = Student.id
+WHERE Enrollment.courseId = ?
+ORDER BY Student.name;
+
+insertEnrollment:
+INSERT INTO Enrollment(studentId, courseId, enrollmentDate, grade) VALUES (?, ?, ?, ?);
+
+updateEnrollmentGrade:
+UPDATE Enrollment SET grade = ? WHERE id = ?;
+
+deleteEnrollment:
+DELETE FROM Enrollment WHERE id = ?;
+
+deleteEnrollmentByStudentAndCourse:
+DELETE FROM Enrollment WHERE studentId = ? AND courseId = ?;
